@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useUserContext } from '../utils/UserState';
 import { USER_LOADED, AUTH_ERROR } from '../utils/actions';
 import API from '../utils/API.jsx';
-import { Container, Box, Grid, Card, Avatar, CardHeader, CardMedia, CardContent, CardActions, IconButton, Typography, makeStyles } from '@material-ui/core';
+import { Container, Box, Grid, Button, Input, Card, Avatar, CardHeader, CardMedia, CardContent, CardActions, IconButton, Typography, makeStyles } from '@material-ui/core';
 import { blueGrey } from '@material-ui/core/colors';
+import ItemCard from '../components/ItemCard';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -34,42 +35,46 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Home() {
   const [state, dispatch] = useUserContext();
+  const [originalList, setOriginalList] = useState()
   const [items, setItems] = useState([]);
+  const [isSearched, setIsSearched] = useState(false);
   const classes = useStyles();
+  const userSearch = useRef()
+
+  const itemSearch = () => {
+    let searchReg = new RegExp(`(${userSearch.current.value})`, 'gi');
+    const matchedItems = originalList.filter(item => {
+      const itemVals = Object.values(item)
+      const isMatch = itemVals.filter(val => val.toString().match(searchReg))
+      if (isMatch.length === 0) {
+        return null;
+      }
+      return item;
+    })
+    console.log(matchedItems)
+    setIsSearched(true)
+    return setItems(matchedItems);
+  }
+
+  const listReset = () => {
+    setIsSearched(false)
+    return setItems(originalList);
+  }
 
   useEffect(() => {
     const itemList = API.getItems();
     console.log(itemList)
-    return setItems(itemList);
+    setItems(itemList)
+    return setOriginalList(itemList);
   }, [])
   return (
     <Container>
+      <Input autoFocus={true} color="primary" inputRef={userSearch} />
+      <Button color="secondary" variant="contained" onClick={isSearched ? listReset : itemSearch} >{isSearched ? "Reset" : "Search"}</Button>
       <Grid container justify="center" spacing={3}>
         {items.map((item) => {
           return <Grid item xs={10} sm={5} lg={4} key={item.id}>
-            <Card>
-              <CardHeader avatar={
-                <Avatar className={classes.avatar}>
-                  {item.manufacturer.split('')[0]}
-                </Avatar>}
-                title={item.manufacturer}
-              />
-              <CardMedia
-                className={classes.media}
-                image={'https://via.placeholder.com/150'}
-                title="Paella dish"
-              />
-              <Box display="flex" justifyContent="flex-end">
-                <CardActions>
-                  <IconButton style={{ fontSize: 50, marginTop: "-62%" }} className="fa fa-plus-circle" color="secondary" />
-                </CardActions>
-              </Box>
-              <CardContent>
-                <Typography className={classes.cardHeader} color="primary" component="p">
-                  {item.product_name} for {item.price}
-                </Typography>
-              </CardContent>
-            </Card>
+            <ItemCard item={item} />
           </Grid>
         })}
       </Grid>

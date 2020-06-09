@@ -18,8 +18,8 @@ function App() {
               <Navbar />
               <Container>
                 <Switch>
-                    <Route exact path="/" component={Home} />
-                    <Route exact path="/order" component={Order} />
+                  <Route exact path="/" component={Home} />
+                  <Route exact path="/order" component={Order} />
                 </Switch>
               </Container>
           </UserProvider>
