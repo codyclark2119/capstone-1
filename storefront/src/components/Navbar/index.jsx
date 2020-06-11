@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Box, Button, Popover, AppBar, Toolbar } from '@material-ui/core'
+import { Container, Box, Button, Popover, AppBar, Toolbar, IconButton } from '@material-ui/core'
 import { useUserContext } from '../../utils/UserState';
 import { USER_LOADED, AUTH_ERROR } from '../../utils/actions';
 import API from '../../utils/API';
 import RegisterForm from '../RegisterForm';
 
 export default function Navbar() {
-    const [{ isAuthenticated, user }, dispatch] = useUserContext();
+    const [state, dispatch] = useUserContext();
     const [anchorEl, setAnchorEl] = useState(null);
 
     const handleClick = (event) => {
@@ -20,30 +20,32 @@ export default function Navbar() {
     const open = Boolean(anchorEl);
     const id = open ? 'simple-popover' : undefined;
     useEffect(() => {
-        if (localStorage.token) {
-            const user = API.loadUser();
-            if (user) {
-                setAnchorEl(null);
-                dispatch({
-                    type: USER_LOADED,
-                    user
-                })
-            } else {
-                dispatch({
-                    type: AUTH_ERROR
-                })
-            }
+        if (localStorage.token === "undefined") {
+            localStorage.removeItem('token')
+        }
+        const user = API.loadUser();
+        if (user.status !== 401) {
+            setAnchorEl(null);
+            dispatch({
+                type: USER_LOADED,
+                user: user.user
+            })
+        } else {
+            dispatch({
+                type: AUTH_ERROR
+            })
         }
     }, []);
     return (
         <div>
             <AppBar position="static">
-                <Box display="flex" flexDirection="row-reverse">
-                    {isAuthenticated ? (
+                <Box display="flex" flexDirection="space-equally" justifyContent="flex-end">
+                    <IconButton  color="inherit" aria-label="home" className="fas fa-store-alt" href="/" />
+                    {state.user ? (
                         <Toolbar>
                             <Button aria-describedby={id} variant="contained" color="primary" onClick={handleClick}>
-                                {`Welcome ${user.first_name} ${user.last_name}`}
-                                </Button>
+                                {`Welcome ${state.user.first_name} ${state.user.last_name}`}
+                            </Button>
                             <Popover
                                 id={id}
                                 open={open}

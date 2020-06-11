@@ -1,44 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { useUserContext } from '../utils/UserState';
-import { USER_LOADED, AUTH_ERROR } from '../utils/actions';
 import API from '../utils/API.jsx';
-import { Container, Box, Grid, Button, Input, Card, Avatar, CardHeader, CardMedia, CardContent, CardActions, IconButton, Typography, makeStyles } from '@material-ui/core';
-import { blueGrey } from '@material-ui/core/colors';
+import { useUserContext } from '../utils/UserState';
+import { Container, Grid, Button, Input, IconButton } from '@material-ui/core';
+import { GET_CART } from '../utils/actions'
+import CartFooter from '../components/CartFooter'
 import ItemCard from '../components/ItemCard';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    maxWidth: 345,
-  },
-  media: {
-    height: 0,
-    paddingTop: '56.25%', // 16:9
-  },
-  expand: {
-    transform: 'rotate(0deg)',
-    marginLeft: 'auto',
-    transition: theme.transitions.create('transform', {
-      duration: theme.transitions.duration.shortest,
-    }),
-  },
-  expandOpen: {
-    transform: 'rotate(180deg)',
-  },
-  avatar: {
-    backgroundColor: blueGrey[500],
-  },
-  cardHeader: {
-    marginTop: "-10%",
-    fontSize: "145%",
-  },
-}));
-
 export default function Home() {
-  const [state, dispatch] = useUserContext();
+  const [, dispatch] = useUserContext();
+  const [page, setPage] = useState(0)
   const [originalList, setOriginalList] = useState()
   const [items, setItems] = useState([]);
   const [isSearched, setIsSearched] = useState(false);
-  const classes = useStyles();
   const userSearch = useRef()
 
   const itemSearch = () => {
@@ -61,23 +34,53 @@ export default function Home() {
     return setItems(originalList);
   }
 
+  const nextPage = () => {
+    let filterList = originalList.filter(item => ((item.id >= ((page + 1) * 30) && (item.id <= ((page + 2) * 30)-1))))
+    if(filterList.length > 0){
+      setPage(page + 1)
+      setItems(filterList);
+    }
+    userSearch.current.focus()
+  }
+
+  const lastPage = () => {
+    let filterList = originalList.filter(item => ((item.id >= ((page - 1) * 30)-1 && (item.id <= ((page) * 30)))))
+    if(filterList.length > 0){
+      setPage(page - 1)
+      setItems(filterList);
+    }
+    userSearch.current.focus()
+  }
+
   useEffect(() => {
-    const itemList = API.getItems();
-    console.log(itemList)
-    setItems(itemList)
-    return setOriginalList(itemList);
+    let itemList = API.getItems();
+    dispatch({
+      type: GET_CART
+    })
+    let filterList = itemList.filter(item => item.id <= (page + 1 * 30))
+    setItems(filterList)
+    setOriginalList(itemList);
+    return 
   }, [])
+
   return (
+    <>
     <Container>
-      <Input autoFocus={true} color="primary" inputRef={userSearch} />
+      <Input style={{minWidth: "30%", maxWidth: "60%", margin: "3% 5%", fontSize: "150%"}} color="primary" inputRef={userSearch} />
       <Button color="secondary" variant="contained" onClick={isSearched ? listReset : itemSearch} >{isSearched ? "Reset" : "Search"}</Button>
-      <Grid container justify="center" spacing={3}>
+      <Grid container justify="center" spacing={4}>
         {items.map((item) => {
           return <Grid item xs={10} sm={5} lg={4} key={item.id}>
             <ItemCard item={item} />
           </Grid>
         })}
+        <Grid item xs={12} style={{padding: "2% 0 13% 0"}}>
+          <IconButton className="fas fa-arrow-left" color="secondary" onClick={lastPage} />
+          <IconButton className="fas fa-arrow-right" color="secondary" onClick={nextPage} />
+        </Grid>
       </Grid>
     </Container>
+    <CartFooter />
+    </>
   )
 }
