@@ -1,0 +1,40 @@
+{
+  "name": "fakazon",
+  "version": "1.0.0",
+  "description": "Your task is to Build an Inventory Management for the business of your choice.  It can be for a grocery store, a car dealership, a jewelry shop, a cell phone store, a book store, or any other legitimate business that maintains an inventory. Take some time to plan out your strategy for completing this project.  As the saying goes, <i>\"If you fail to plan, you plan to fail.\"</i>",
+  "main": "index.js",
+  "scripts": {
+    "start": "if-env NODE_ENV=production && npm run start:prod || npm run start:dev",
+    "server": "nodemon server.js",
+    "start:prod": "node server.js",
+    "start:dev": "concurrently \"nodemon --ignore 'client/*'\" \"npm run client\"",
+    "client": "cd storefront && npm start",
+    "seed": "node scripts/seedDB.js",
+    "install": "concurrently \"npm install'\" \"cd storefront && npm install\"",
+    "build": "cd storefront && npm run build",
+    "heroku-postbuild": "npm run seed && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codyclark2119/ReactHooksTemplate.git"
+  },
+  "author": "Cody Clark",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/codyclark2119/ReactHooksTemplate/issues"
+  },
+  "homepage": "https://github.com/codyclark2119/ReactHooksTemplate#readme",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-validator": "^6.12.0",
+    "if-env": "^1.0.4",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.12.14"
+  },
+  "devDependencies": {
+    "concurrently": "^6.2.0",
+    "nodemon": "^2.0.7"
+  }
+}
