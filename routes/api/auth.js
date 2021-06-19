@@ -14,11 +14,17 @@ const User = require('../../models/User');
 // @route   GET api/auth
 // @desc    Authenticate registration route
 // @access  Public
+
+// By passing 'auth' we are forcing the middleware/auth.js function to 
+// run and validate the token first so that it sets the req.user property if valid
 router.get('/', auth, async (req, res) => {
     try {
+        // This finds the user based on the id stored from the tokenized payload and returns it without the password value
         const user = await User.findById(req.user.id).select('-password');
         res.json(user);
     } catch (err) {
+        // If any errors are thrown, returns a server error to clear the token from the users front end
+        // and force a re-login
         console.log(err.message);
         res.status(500).send('Server Error');
     }

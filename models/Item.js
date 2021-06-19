@@ -2,12 +2,11 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const itemSchema = new Schema({
-    product: {
+    serial_number: {
         type: String,
-        required: true,
-        index: { unique: true }
+        required: true
     },
-    seller: {
+    product_name: {
         type: String,
         required: true
     },
@@ -15,20 +14,20 @@ const itemSchema = new Schema({
         type: String,
         required: true
     },
-    description: {
+    manufacturer: {
         type: String,
         required: true
     },
-    categories: {
-        type: Array,
+    category: {
+        type: String,
         required: true
     },
-    stock: {
-        type: String,
+    quantity: {
+        type: Number,
         required: true
     }
 })
 
-const Item = mongoose.model("Item", itemSchema);
+const Item = mongoose.model("item", itemSchema);
 
 module.exports = Item;

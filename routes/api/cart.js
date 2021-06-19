@@ -8,69 +8,94 @@ const {
 
 const Cart = require('../../models/Cart');
 const User = require('../../models/User');
-const Item = require('../../models/Item');
-
 
 // @route   Get api/cart/
 // @desc    Gets current user cart
 // @access  Private
+
+// By passing 'auth' we are forcing the middleware/auth.js function to 
+// run and validate the token first so that it sets the req.user property if valid
 router.get('/', auth, async (req, res) => {
     try {
-      const cart = await Cart.find({ user: req.user.id }).sort({ date: -1 });
-      res.json(cart);
+        // Finding the cart with the associated user id and sorts by date added
+        const cart = await Cart.find({ user: req.user.id }).populate({ path: 'cart.item', select: "-category" }).sort({ 'cart.date_modified': -1 });
+        res.json(cart);
     } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
-  });
+});
 
 // @route   POST api/cart/
 // @desc    Create or update user profile
 // @access  Private
+
+// By passing 'auth' we are forcing the middleware/auth.js function to 
+// run and validate the token first so that it sets the req.user property if valid
 router.post('/', [auth, [
-    check('product', 'Product is required').not().isEmpty(),
-    check('price', 'Price is required').not().isEmpty(),
+    check('id', 'Product id is required').not().isEmpty(),
+    check('quantity', 'Quantity is required').not().isEmpty(),
 ]], async (req, res) => {
+    // Checking the validation
     const errors = validationResult(req);
+    // Responding with the found error
     if (!errors.isEmpty()) {
         return res.status(400).json({
             errors: errors.array()
         });
     }
-    
+    // Destructuring out product details
     const {
-        product,
-        seller,
-        price
+        id,
+        quantity
     } = req.body;
 
-    //Build profile object
-    const cartFields = {};
-    if (product) cartFields.product = product;
-    if (seller) cartFields.seller = seller;
-    if (price) cartFields.price = price;
-
-
     try {
+        // Find the user's cart
         let cart = await Cart.findOne({
             user: req.user.id
-        });
-
+        }).populate({ path: 'cart.item', select: "-category" }).sort({ 'cart.date_modified': -1 });
+        // If the cart exists add the new item to it
         if (cart) {
-            cart = await Cart.findOneAndUpdate({
-                user: req.user.id
-            }, {
-                    $push: cartFields
+            // Checking if the item is already in the cart
+            let found = false;
+            for (let i = 0; i < cart.cart.length; i++) {
+                if (cart.cart[i]._id == id) {
+                    found = true;
+                    break;
+                }
+            }
+            // If found only update the items quanitity
+            if (found) {
+                cart = await Cart.findOneAndUpdate({
+                    user: req.user.id, "cart.item": id
+                }, {
+                    $push: { "cart.quantity": quantity, "cart.date_modified": Date.now() }
+                });
+            }
+            // If not update the cart with a new item
+            else {
+                cart = await Cart.findOneAndUpdate({
+                    user: req.user.id
+                }, {
+                    $push: { item: id, quantity }
                 }, {
                     new: true
                 });
-
-            return res.json(cart);
+            }
+            // Return the cart
+            return res.status(200).json(cart);
         }
 
-        //Create
-        cart = new Cart(cartFields);
-
+        //Create cart if one doesnt exist
+        cart = new Cart({
+            user: req.user.id,
+            cart: [{
+                id,
+                quantity
+            }]
+        });
+        // Save the new cart and return to the front end
         await cart.save();
         res.json(cart);
     } catch (err) {
@@ -79,48 +104,49 @@ router.post('/', [auth, [
     }
 });
 
-// @route   Get api/cart/item/:item_id
-// @desc    Get profile by user ID
-// @access  Public
+// @route   Delete api/cart/item/:item_id
+// @desc    Delete item by Item ID
+// @access  Private
+
+// By passing 'auth' we are forcing the middleware/auth.js function to 
+// run and validate the token first so that it sets the req.user property if valid
 router.delete('/item/:item_id', auth, async (req, res) => {
     try {
-        const cart = await Cart.findOne({
-            user: req.user.id
-        }).populate('user', ['name']);
-        res.json(profile);
-
-        if (!profile) return res.status(400).json({
-            msg: 'Profile not found'
+        // Checking if item exists in user cart
+        const item = await Cart.findOne({
+            user: req.user.id, "cart.item": req.params.item_id
         });
+        // If not return failure
+        if (!item) {
+            return res.status(400).json({
+                msg: 'Item not found'
+            });
+        } else {
+            // else delete found item
+            await Cart.updateOne(
+                { user: req.user.id },
+                { $pull: { "cart.item": req.params.item_id } }
+            );
+        }
     } catch (err) {
         console.log(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(400).json({
-                msg: 'Profile Invalid'
-            });
-        };
         res.status(500).send("Server Error");
     }
 });
 
 // @route   DELETE api/cart/
-// @desc    Delete profile, user, and posts
+// @desc    Delete user cart
 // @access  Private
+
+// By passing 'auth' we are forcing the middleware/auth.js function to 
+// run and validate the token first so that it sets the req.user property if valid
 router.delete('/', auth, async (req, res) => {
     try {
-        // Remove user posts
-        await Post.deleteMany({ user: req.user.id });
-        //Removes profile
-        await Profile.findOneAndRemove({
-            user: req.user.id
-        });
-        //Removes user
-        await User.findOneAndRemove({
-            _id: req.user.id
-        });
+        // Remove user cart
+        await Cart.deleteOne({ user: req.user.id });
 
-        res.json({
-            msg: 'User Deleted'
+        res.status(200).json({
+            msg: 'Cart Deleted'
         });
     } catch (err) {
         console.log(err.message);

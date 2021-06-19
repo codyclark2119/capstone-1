@@ -37,7 +37,6 @@ export default {
             }
             // Creating an object of the data
             let user = {
-                _id: uuidv4(),
                 email,
                 password,
                 first_name,
@@ -98,12 +97,14 @@ export default {
             // If the user has a cart check if they have the item inside it already
             if (cart) {
                 cartItem = await (cart.filter(item => item.id === itemId))[0];
-                // If the item is in the cart check that the new quantity is possible
-                if (cartItem) {
-                    if (selectedItem.quantity < (parseInt(newQuantity) + parseInt(cartItem.quantity))) {
-                        return { status: 400, message: "Not enough in stock" }
-                    }
+            }
+            // If the item is in the cart check that the new quantity is possible
+            if (cartItem) {
+                let totQuantity = parseInt(newQuantity) + parseInt(cartItem.quantity);
+                if (selectedItem.quantity < totQuantity) {
+                    return { status: 400, message: "Not enough in stock" }
                 }
+                return { status: 200, item: { id: itemId, quantity: totQuantity } }
             }
             // Otherwise check if the quantity is valid
             if (selectedItem.quantity < newQuantity) {
@@ -115,10 +116,10 @@ export default {
             throw new Error(error)
         }
     },
-    getCart: async (userCart) => {
+    getCart: async (cart) => {
         try {
-            if (userCart.length !== 0) {
-                const fullCart = await userCart.map(cartItem => {
+            if (cart.length !== 0) {
+                const fullCart = await cart.map(cartItem => {
                     let userItem = (itemsList.filter((item) => {
                         return item.id === cartItem.id
                     }))[0];
