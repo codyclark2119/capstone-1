@@ -18,7 +18,16 @@ const User = require('../../models/User');
 router.get('/', auth, async (req, res) => {
     try {
         // Finding the cart with the associated user id and sorts by date added
-        const cart = await Cart.find({ user: req.user.id }).populate({ path: 'cart.item', select: "-category" }).sort({ 'cart.date_modified': -1 });
+        let cart = await Cart.findOne({ user: req.user.id }).populate({ path: 'cart.item', select: "-category -quantity -_id" }).sort({ 'cart.date_modified': -1 });
+        console.log(cart)
+        if (!cart){
+            cart = new Cart({
+                user: req.user.id,
+                cart: []
+            });
+            await cart.save();
+            console.log(cart)
+        }
         res.json(cart);
     } catch (err) {
         console.error(err.message);
@@ -54,35 +63,35 @@ router.post('/', [auth, [
         // Find the user's cart
         let cart = await Cart.findOne({
             user: req.user.id
-        }).populate({ path: 'cart.item', select: "-category" }).sort({ 'cart.date_modified': -1 });
+        }).populate({ path: 'cart.item', select: "-category -_id" }).sort({ 'cart.date_modified': -1 });
         // If the cart exists add the new item to it
         if (cart) {
             // Checking if the item is already in the cart
-            let found = false;
             for (let i = 0; i < cart.cart.length; i++) {
-                if (cart.cart[i]._id == id) {
-                    found = true;
-                    break;
+                console.log(cart.cart[i].item._id)
+                if (cart.cart[i].item._id == id ) {
+                    if(cart.cart[i].item.quantity > (quantity + cart.cart[i].quantity)){
+                        // If found only update the items quanitity
+                        cart = await Cart.updateOne({
+                            user: req.user.id, "cart.item": id
+                        }, {
+                            $set: { cart: { item: id, quantity: (quantity + cart.cart[i].quantity), date_modified: new Date} }
+                        });
+                        return res.status(200).json(cart);
+                    } else {
+                        res.status(400).send('Amount Unavailable');
+                    }
                 }
             }
-            // If found only update the items quanitity
-            if (found) {
-                cart = await Cart.findOneAndUpdate({
-                    user: req.user.id, "cart.item": id
-                }, {
-                    $push: { "cart.quantity": quantity, "cart.date_modified": Date.now() }
-                });
-            }
             // If not update the cart with a new item
-            else {
-                cart = await Cart.findOneAndUpdate({
-                    user: req.user.id
-                }, {
-                    $push: { item: id, quantity }
-                }, {
-                    new: true
-                });
-            }
+            cart = await Cart.findOneAndUpdate({
+                user: req.user.id
+            }, {
+                $push: { cart: {item: id, quantity} }
+            }, {
+                new: true
+            });
+            
             // Return the cart
             return res.status(200).json(cart);
         }
@@ -91,7 +100,7 @@ router.post('/', [auth, [
         cart = new Cart({
             user: req.user.id,
             cart: [{
-                id,
+                item: id,
                 quantity
             }]
         });

@@ -141,7 +141,7 @@ router
                 // Tokenizing the payload with a hidden env value and setting the length its valid in seconds
                 jwt.sign(
                     payload,
-                    process.env.jwtsecret,
+                    process.env.JWT_SECRET,
                     { expiresIn: 360000 },
                     (err, token) => {
                         if (err) throw err;

@@ -1,6 +1,5 @@
 import React, { createContext, useReducer, useContext } from "react";
 import { CREATE_USER, LOGIN_USER, USER_LOADED, DELETE_USER, LOGOUT, AUTH_ERROR, LOGIN_FAIL, REGISTER_FAIL, ADD_TO_CART, REMOVE_CART, EDIT_CART, GET_CART, CLEAR_CART } from "./actions";
-import API from "./API";
 
 const UserContext = createContext();
 const { Provider } = UserContext;
@@ -16,8 +15,6 @@ const reducer = (state, action) => {
         case CREATE_USER:
         case LOGIN_USER:
             localStorage.setItem('token', action.token);
-            let user = API.loadUser();
-            console.log(user)
             return {
                 ...state,
                 token: localStorage.getItem('token'),
@@ -40,7 +37,7 @@ const reducer = (state, action) => {
             localStorage.removeItem('cart')
             const newToCart = action.item;
             let existingItem = (state.cart.filter(item => item.id === newToCart.id))[0]
-            if(existingItem){
+            if (existingItem) {
                 let newCart = state.cart.filter(item => item.id !== newToCart.id)
                 existingItem.quantity = parseInt(existingItem.quantity) + parseInt(newToCart.quantity);
                 localStorage.setItem('cart', JSON.stringify([existingItem, ...newCart]))
@@ -54,7 +51,7 @@ const reducer = (state, action) => {
                 ...state,
                 cart: [newToCart, ...state.cart]
             };
-        case REMOVE_CART: 
+        case REMOVE_CART:
             localStorage.removeItem('cart')
             const removedCart = state.cart.filter(item => item.id !== action.id);
             if (removedCart.length !== 0) {
@@ -69,7 +66,7 @@ const reducer = (state, action) => {
                 ...state,
                 cart: []
             }
-        case EDIT_CART: 
+        case EDIT_CART:
             localStorage.removeItem('cart')
             const editItem = (state.cart.filter(item => item.id === action.item.id))[0];
             editItem.quantity = action.item.quantity;
@@ -81,8 +78,8 @@ const reducer = (state, action) => {
             }
         case GET_CART:
             const localCart = JSON.parse(localStorage.getItem('cart'))
-            if(localCart){                
-                if(localCart.length !== 0){
+            if (localCart) {
+                if (localCart.length !== 0) {
                     return {
                         ...state,
                         cart: [...localCart]
@@ -99,13 +96,13 @@ const reducer = (state, action) => {
                 ...state,
                 cart: []
             }
-            case CLEAR_CART:
-                localStorage.removeItem('cart')
-                localStorage.setItem('cart', JSON.stringify([]))
-                return{
-                    ...state,
-                    cart: []
-                }
+        case CLEAR_CART:
+            localStorage.removeItem('cart')
+            localStorage.setItem('cart', JSON.stringify([]))
+            return {
+                ...state,
+                cart: []
+            }
         default:
             return state;
     }
@@ -113,11 +110,11 @@ const reducer = (state, action) => {
 
 const UserProvider = ({ value = {}, ...props }) => {
     const [state, dispatch] = useReducer(reducer, {
-            token: localStorage.getItem('token'),
-            isAuthenticated: null,
-            user: null,
-            cart: [],
-        }
+        token: localStorage.getItem('token'),
+        isAuthenticated: null,
+        user: null,
+        cart: [],
+    }
     );
 
     return <Provider value={[state, dispatch]} {...props} />;
