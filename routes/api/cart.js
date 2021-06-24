@@ -68,7 +68,6 @@ router.post('/', [auth, [
         if (cart) {
             // Checking if the item is already in the cart
             for (let i = 0; i < cart.cart.length; i++) {
-                console.log(cart.cart[i].item._id)
                 if (cart.cart[i].item._id == id ) {
                     if(cart.cart[i].item.quantity > (quantity + cart.cart[i].quantity)){
                         // If found only update the items quanitity
@@ -91,7 +90,6 @@ router.post('/', [auth, [
             }, {
                 new: true
             });
-            
             // Return the cart
             return res.status(200).json(cart);
         }

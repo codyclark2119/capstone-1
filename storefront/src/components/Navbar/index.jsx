@@ -17,13 +17,17 @@ export default function Navbar() {
         setAnchorEl(null);
     };
 
+    // Creating a variable for opening the login popover
     const open = Boolean(anchorEl);
     const id = open ? 'simple-popover' : undefined;
     useEffect(() => {
+        // If the token stored is invalid remove it
         if (localStorage.token === "undefined") {
             localStorage.removeItem('token')
         }
+        // Check user token for validity
         const user = API.loadUser();
+        // If a successful call store user data in state
         if (user.status !== 401) {
             setAnchorEl(null);
             dispatch({
@@ -31,6 +35,7 @@ export default function Navbar() {
                 user: user.user
             })
         } else {
+            // If it fails dispatch a full clear of user state
             dispatch({
                 type: AUTH_ERROR
             })

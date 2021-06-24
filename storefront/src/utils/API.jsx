@@ -116,6 +116,9 @@ export default {
             throw new Error(error)
         }
     },
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // IN PROGRESS, Getting the cart from the backend
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     getCart: async (cart) => {
         try {
             if (cart.length !== 0) {
@@ -133,6 +136,9 @@ export default {
             throw new Error(error)
         }
     },
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // IN PROGRESS, Confirming an order
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     sendOrder: async ({ shippingInfo, billingInfo, cardInfo, cart }) => {
         try {
             const newOrder = {
