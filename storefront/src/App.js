@@ -12,7 +12,9 @@ function App() {
   return (
     <Router>
       <div className="App">
+        {/* Theme Provider for Material UI */}
         <ThemeProvider theme={theme}>
+          {/* User Provider for the User State */}
           <UserProvider>
               <Navbar />
                 <Switch>

@@ -5,6 +5,7 @@ import { useUserContext } from '../../utils/UserState';
 import { ADD_TO_CART } from '../../utils/actions';
 import API from '../../utils/API';
 
+// Material UI Styling
 const useStyles = makeStyles((theme) => ({
     media: {
         height: 0,
@@ -27,13 +28,16 @@ const useStyles = makeStyles((theme) => ({
         fontSize: "150%",
     },
 }));
+
 export default function ItemCard({ item }) {
     const classes = useStyles();
     const [quantity, setQuantity] = useState(1);
     const [state, dispatch] = useUserContext();
 
+    // Adding values to the cart
     const addToCart = async () => {
         try {
+            // Checking that the item has enough in stock to add to cart
             const newItem = await API.quantityCheck({ newQuantity: quantity, itemId: item.id, cart: state.cart });
             if (newItem.status === 200) {
                 dispatch({
@@ -46,6 +50,7 @@ export default function ItemCard({ item }) {
             throw new Error(error)
         }
     }
+    // A handler for updates to the amount the user wants to add
     const handleChange = (event) => {
         setQuantity(event.target.value)
     }

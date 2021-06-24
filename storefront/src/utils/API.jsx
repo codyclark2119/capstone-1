@@ -1,146 +1,154 @@
-import userData from '../data/userSchema';
-import itemData from '../data/itemSchema';
-import orderData from '../data/orderSchema'
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-
-if(!localStorage.users || !localStorage.items || !localStorage.orders ){
-    localStorage.setItem('users',JSON.stringify(userData))
-    localStorage.setItem('items',JSON.stringify(itemData))
-    localStorage.setItem('orders',JSON.stringify(orderData))
-}
-
-let usersList = JSON.parse(localStorage.getItem('users'));
-let itemsList = JSON.parse(localStorage.getItem('items'));
-let ordersList = JSON.parse(localStorage.getItem('orders'));
+import axios from 'axios';
+// Creating encyption salt
+const salt = await bcrypt.genSalt(13);
 
 export default {
-    loadUser: () => {
+    // Using existing token to get userdata
+    loadUser: async () => {
         try {
-            let decoded;
             let loadedUser;
+            // If no token return fail status
             if (localStorage.token == undefined) {
                 localStorage.removeItem('token')
-                return {status: 401, message: "Unauthorized Token"};
-            } 
-            decoded = jwt.verify(localStorage.token, process.env.REACT_APP_JWTSecret);
-            loadedUser = usersList.find(user => user._id === decoded.id);
-            if (!loadedUser) return {status: 401, message: "Unauthorized User"}
-            return { status: 200, user: {email: loadedUser.email, _id: loadedUser._id, first_name: loadedUser.first_name, last_name: loadedUser.last_name} }
-            
+                return { status: 401, message: "Unauthorized Token" };
+            }
+            // Calling out to backend for userdata with their token in the header
+            loadedUser = await axios.get('api/auth', {
+                headers: {
+                    'x-auth-token': localStorage.token
+                }
+            });
+            // If no user found return fail status
+            if (!loadedUser) return { status: 401, message: "Unauthorized User" }
+            // Otherwise return succesfully found userdata
+            return { status: 200, user: { email: loadedUser.email, _id: loadedUser._id, first_name: loadedUser.first_name, last_name: loadedUser.last_name } }
         } catch (error) {
             throw new Error(error)
         }
     },
+    // Registering a user in the database
     register: async ({ email, password, first_name, last_name }) => {
         try {
+            // If missing any values return a failure
             if (!email || !password || !first_name || !last_name) {
                 return { status: 400, message: "Fill out all forms" }
             }
-            let user = await usersList.find(user => user.email === email)
-            if (user) {
-                return { status: 400, message: "User already exists" }
-            }
-            user = {
-                _id: uuidv4(),
+            // Creating an object of the data
+            let user = {
                 email,
                 password,
                 first_name,
                 last_name
             }
-            const salt = await bcrypt.genSalt(13);
+            // Encrypting the password 
             user.password = await bcrypt.hash(password, salt);
-            const payload = {
-                id: user._id
-            };
-            const token = await jwt.sign(
-                payload,
-                process.env.REACT_APP_JWTSecret,
-                { expiresIn: '7d' }
-                );
-            usersList.push(user)
-            return { status: 200, message: "User Created", token }
+            let userToken = await axios.post('api/users', user);
+            // If the backend responds with errors from express-validator
+            if (userToken.errors) {
+                return { status: 400, message: `Invalid: ${userToken.errors.msg}` }
+            }
+            // Otherwise return succesfully found userdata
+            return { status: 200, message: "User Created", userToken }
         } catch (error) {
             throw new Error(error)
         }
     },
+    // Logging in a user
     login: async ({ email, password }) => {
         try {
+            // If no value found fail
             if (email === "" || password === "") {
                 return { status: 400, message: "Fill out all forms" }
             }
-            let user = usersList.find(user => user.email === email)
-            if (!user) {
-                return { status: 404, message: "User doesn't exist" }
+            // Creating an object of the data
+            let user = {
+                email,
+                password
             }
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return { status: 401, message: "Incorrect Login Attempt" }
+            // Encrypting the password before sending
+            user.password = await bcrypt.hash(password, salt);
+            let userToken = await axios.post('api/users/login', user);
+            // If the backend responds with errors from express-validator
+            if (userToken.errors) {
+                return { status: 400, message: `Invalid: ${userToken.errors.msg}` }
             }
-            const payload = {
-                id: user._id
-            };
-            const token = await jwt.sign(
-                payload,
-                process.env.REACT_APP_JWTSecret,
-                { expiresIn: '7d' }
-            );
-            return { status: 200, message: "User Logged In", token }
+            // Otherwise return succesfully found userdata
+            return { status: 200, message: "User Logged In", userToken }
         } catch (error) {
             throw new Error(error)
         }
     },
-    getItems: () => {
+    // Get items from database
+    getItems: async () => {
+        // Getting items from the backend
+        let itemsList = await axios.get('api/products');
         return itemsList;
     },
-    quantityCheck: async ({itemId, newQuantity, cart}) => {
-        try {            
-            const selectedItem = await (itemsList.filter(item => item.id === itemId))[0]
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // IN PROGRESS, checks quantity from backend to see if user can add to cart
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    quantityCheck: async ({ itemId, newQuantity, cart }) => {
+        try {
+            // Get item details from backend
+            const selectedItem = await axios.get(`api/products/${itemId}`);
             let cartItem = null;
-            if(cart){
-                cartItem = await (cart.filter(item => item.id === itemId))[0]
+            // If the user has a cart check if they have the item inside it already
+            if (cart) {
+                cartItem = await (cart.filter(item => item.id === itemId))[0];
             }
-            if(cartItem){                
-                if (selectedItem.quantity < (parseInt(newQuantity) + parseInt(cartItem.quantity))){
-                    return {status: 400, message: "Not enough in stock"}
+            // If the item is in the cart check that the new quantity is possible
+            if (cartItem) {
+                let totQuantity = parseInt(newQuantity) + parseInt(cartItem.quantity);
+                if (selectedItem.quantity < totQuantity) {
+                    return { status: 400, message: "Not enough in stock" }
                 }
+                return { status: 200, item: { id: itemId, quantity: totQuantity } }
             }
-            if (selectedItem.quantity < newQuantity){
-                return {status: 400, message: "Not enough in stock"}
+            // Otherwise check if the quantity is valid
+            if (selectedItem.quantity < newQuantity) {
+                return { status: 400, message: "Not enough in stock" }
             }
-            return {status: 200, item: {id:itemId, quantity: newQuantity}}
+            // If valid return the item as a valid amount to add to cart
+            return { status: 200, item: { id: itemId, quantity: newQuantity } }
         } catch (error) {
             throw new Error(error)
         }
     },
-    getCart: async (userCart) => {
-        try {            
-            if(userCart.length !== 0){
-                const fullCart = await userCart.map(cartItem => {
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // IN PROGRESS, Getting the cart from the backend
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    getCart: async (cart) => {
+        try {
+            if (cart.length !== 0) {
+                const fullCart = await cart.map(cartItem => {
                     let userItem = (itemsList.filter((item) => {
                         return item.id === cartItem.id
                     }))[0];
                     userItem.userQuantity = cartItem.quantity;
                     return userItem
                 });
-                return {status: 200, list:fullCart}
+                return { status: 200, list: fullCart }
             }
             return []
         } catch (error) {
             throw new Error(error)
         }
     },
-    sendOrder: async ({shippingInfo, billingInfo, cardInfo, cart}) => {
-        try {            
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // IN PROGRESS, Confirming an order
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    sendOrder: async ({ shippingInfo, billingInfo, cardInfo, cart }) => {
+        try {
             const newOrder = {
                 id: uuidv4(),
                 shippingInfo,
                 billingInfo,
                 cardInfo,
                 cart
-            }   
-            
+            }
+
             const finalCart = await cart.map(cartItem => {
                 let userItem = (itemsList.filter((item) => {
                     return item.id === cartItem.id
@@ -149,7 +157,7 @@ export default {
                 return userItem
             });
 
-            if (finalCart.length > 0){
+            if (finalCart.length > 0) {
                 const newItemsArr = await (finalCart.map(cartItem => {
                     let userItem = itemsList.filter((item) => {
                         return item.id !== cartItem.id
@@ -159,9 +167,9 @@ export default {
                 localStorage.removeItem('items')
                 localStorage.setItem('items', JSON.stringify((newItemsArr.concat(finalCart))))
                 ordersList.push(newOrder)
-                return {status: 200}
+                return { status: 200 }
             }
-            return {status: 400, message: "Bad Request"}
+            return { status: 400, message: "Bad Request" }
         } catch (error) {
             throw new Error(error)
         }
