@@ -2,8 +2,8 @@ import React, { createContext, useReducer, useContext } from "react";
 import { CREATE_USER, LOGIN_USER, USER_LOADED, DELETE_USER, LOGOUT, AUTH_ERROR, LOGIN_FAIL, REGISTER_FAIL, ADD_TO_CART, REMOVE_CART, EDIT_CART, GET_CART, CLEAR_CART } from "./actions";
 
 // Creating a context and destucturing the provider out
-const UserContext = createContext();
-const { Provider } = UserContext;
+const GlobalContext = createContext();
+const { Provider } = GlobalContext;
 
 // Function that takes in the current state and an action
 const reducer = (state, action) => {
@@ -23,8 +23,7 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 token: localStorage.getItem('token'),
-                isAuthenticated: true,
-                user: user.user
+                isAuthenticated: true
             };
         // On any unsuccessful auth check or logout
         case DELETE_USER:
@@ -120,26 +119,25 @@ const reducer = (state, action) => {
 }
 
 //Function that provides an initial value for state and the props is passing through the child components. 
-const UserProvider = ({ value = {}, ...props }) => {
+const DataProvider = ({ value = {}, ...props }) => {
 
     //The state value is what is being used/tracked to hold values while dispatch is how you edit those values
     const [state, dispatch] = useReducer(reducer, {
-
         //The object you're passing is what becomes state, anything you pass here is an initial state value
         token: localStorage.getItem('token'),
-        isAuthenticated: null,
+        isAuthenticated: false,
         user: null,
         cart: [],
-    }
-    );
+        items: []
+    });
 
     //This component now holds both an instance of the state object and the function dispatch that can change that state. The props are passed so that the child components that are going to use the state values are rendered.
     return <Provider value={[state, dispatch]} {...props} />;
 };
 
 // When called provides the state and dispatch functions
-const useUserContext = () => {
-    return useContext(UserContext);
+const useGlobalContext = () => {
+    return useContext(GlobalContext);
 };
 
-export { UserProvider, useUserContext };
+export { DataProvider, useGlobalContext };

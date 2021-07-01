@@ -17,6 +17,23 @@ router.get("/", function (req, res) {
     })
 });
 
+// @route   GET api/products by page and limit
+// @desc    Get all items
+// @access  Public
+router.get("/p/:page/l/:limit", function (req, res) {
+    const {page, limit} = req.params;
+
+    Item.find({}, null, {skip: (parseInt(page) * parseInt(limit)), limit: parseInt(limit) }, function (error, response) {
+        if (error) {
+            console.log(error);
+            res.send(error);
+        }
+        else {
+            res.json(response);
+        }
+    })
+});
+
 // @route   GET api/products/:id
 // @desc    Get a specifc product
 // @access  Public

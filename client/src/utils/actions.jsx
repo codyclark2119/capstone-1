@@ -14,4 +14,4 @@ export const LOGIN_FAIL = "LOGIN_FAIL";
 export const REGISTER_FAIL = "REGISTER_FAIL";
 export const ADD_TO_CART = "ADD_TO_CART";
 export const EDIT_CART = "EDIT_CART";
-export const GET_CART = "GET_CART"
+export const GET_CART = "GET_CART";
