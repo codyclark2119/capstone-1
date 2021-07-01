@@ -1,16 +1,15 @@
 import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 // Creating encyption salt
-const salt = await bcrypt.genSalt(13);
+const salt = bcrypt.genSalt(13);
 
-export default {
+const API = {
     // Using existing token to get userdata
     loadUser: async () => {
         try {
             let loadedUser;
             // If no token return fail status
-            if (localStorage.token == undefined) {
+            if (!localStorage.token) {
                 localStorage.removeItem('token')
                 return { status: 401, message: "Unauthorized Token" };
             }
@@ -23,7 +22,7 @@ export default {
             // If no user found return fail status
             if (!loadedUser) return { status: 401, message: "Unauthorized User" }
             // Otherwise return succesfully found userdata
-            return { status: 200, user: { email: loadedUser.email, _id: loadedUser._id, first_name: loadedUser.first_name, last_name: loadedUser.last_name } }
+            return { status: 200, user: loadedUser.data }
         } catch (error) {
             throw new Error(error)
         }
@@ -68,23 +67,23 @@ export default {
                 password
             }
             // Encrypting the password before sending
-            user.password = await bcrypt.hash(password, salt);
-            let userToken = await axios.post('api/users/login', user);
+            // user.password = await bcrypt.hash(password, salt);
+            let userToken = await axios.post('api/user/login', user);
             // If the backend responds with errors from express-validator
             if (userToken.errors) {
                 return { status: 400, message: `Invalid: ${userToken.errors.msg}` }
             }
             // Otherwise return succesfully found userdata
-            return { status: 200, message: "User Logged In", userToken }
+            return { status: 200, message: "User Logged In", token: userToken.data.token }
         } catch (error) {
             throw new Error(error)
         }
     },
     // Get items from database
-    getItems: async () => {
+    getItems: async (pageNo, limit) => {
         // Getting items from the backend
-        let itemsList = await axios.get('api/products');
-        return itemsList;
+        let itemsList = await axios.get(`api/products/p/${pageNo}/l/${limit}`);
+        return itemsList.data;
     },
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // IN PROGRESS, checks quantity from backend to see if user can add to cart
@@ -121,17 +120,17 @@ export default {
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     getCart: async (cart) => {
         try {
-            if (cart.length !== 0) {
-                const fullCart = await cart.map(cartItem => {
-                    let userItem = (itemsList.filter((item) => {
-                        return item.id === cartItem.id
-                    }))[0];
-                    userItem.userQuantity = cartItem.quantity;
-                    return userItem
-                });
-                return { status: 200, list: fullCart }
-            }
-            return []
+            // if (cart.length !== 0) {
+            //     const fullCart = await cart.map(cartItem => {
+            //         let userItem = (itemsList.filter((item) => {
+            //             return item.id === cartItem.id
+            //         }))[0];
+            //         userItem.userQuantity = cartItem.quantity;
+            //         return userItem
+            //     });
+            //     return { status: 200, list: fullCart }
+            // }
+            // return []
         } catch (error) {
             throw new Error(error)
         }
@@ -141,37 +140,38 @@ export default {
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     sendOrder: async ({ shippingInfo, billingInfo, cardInfo, cart }) => {
         try {
-            const newOrder = {
-                id: uuidv4(),
-                shippingInfo,
-                billingInfo,
-                cardInfo,
-                cart
-            }
+            // const newOrder = {
+            //     id: uuidv4(),
+            //     shippingInfo,
+            //     billingInfo,
+            //     cardInfo,
+            //     cart
+            // }
 
-            const finalCart = await cart.map(cartItem => {
-                let userItem = (itemsList.filter((item) => {
-                    return item.id === cartItem.id
-                }))[0];
-                userItem.quantity = (parseInt(userItem.quantity) - parseInt(cartItem.userQuantity));
-                return userItem
-            });
+            // const finalCart = await cart.map(cartItem => {
+            //     let userItem = (itemsList.filter((item) => {
+            //         return item.id === cartItem.id
+            //     }))[0];
+            //     userItem.quantity = (parseInt(userItem.quantity) - parseInt(cartItem.userQuantity));
+            //     return userItem
+            // });
 
-            if (finalCart.length > 0) {
-                const newItemsArr = await (finalCart.map(cartItem => {
-                    let userItem = itemsList.filter((item) => {
-                        return item.id !== cartItem.id
-                    });
-                    return userItem
-                }))[0];
-                localStorage.removeItem('items')
-                localStorage.setItem('items', JSON.stringify((newItemsArr.concat(finalCart))))
-                ordersList.push(newOrder)
-                return { status: 200 }
-            }
-            return { status: 400, message: "Bad Request" }
+            // if (finalCart.length > 0) {
+            //     const newItemsArr = await (finalCart.map(cartItem => {
+            //         let userItem = itemsList.filter((item) => {
+            //             return item.id !== cartItem.id
+            //         });
+            //         return userItem
+            //     }))[0];
+            //     localStorage.removeItem('items')
+            //     localStorage.setItem('items', JSON.stringify((newItemsArr.concat(finalCart))))
+            //     ordersList.push(newOrder)
+            //     return { status: 200 }
+            // }
+            // return { status: 400, message: "Bad Request" }
         } catch (error) {
             throw new Error(error)
         }
     }
 }
+export default API;
